@@ -101,7 +101,7 @@ class AlienFXACPIDriver(object):
             return None
             
         try:
-            control_file = os.path.join(self._acpi_path, "read_packet", self.WMI_COMMAND_ATTR)
+            control_file = os.path.join(self._acpi_path, "rgb_zones", self.WMI_COMMAND_ATTR)
             
             if os.path.exists(control_file):
                 with open(control_file, 'rb') as f:
