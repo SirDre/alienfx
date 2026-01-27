@@ -1,0 +1,214 @@
+{
+  "theme": {
+    "themeID": 1,
+    "name": "Basic - Alien Blood",
+    "version": "2.7.0.0",
+    "mode": 0,
+    "actionDuration": 3,
+    "tempo": 200,
+    "readOnly": false
+  },
+  "devices": [
+    {
+      "deviceID": 1,
+      "description": "ASM-100",
+      "deviceTypeID": 1,
+      "pid": "ASM100",
+      "model": "ASM100",
+      "compatibleSystem": "",
+      "actionsPerZones": 1,
+      "vid": "187C"
+    }
+  ],
+  "deviceTypes": [
+    {
+      "deviceTypeID": 1,
+      "description": "Chassis"
+    },
+    {
+      "deviceTypeID": 2,
+      "description": "Mouse"
+    },
+    {
+      "deviceTypeID": 3,
+      "description": "Keyboard"
+    }
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "groupID": "Group01",
+      "name": "Alienhead"
+    },
+    {
+      "id": 2,
+      "groupID": "Group02",
+      "name": "Side Left"
+    }
+  ],
+  "leds": [
+    {
+      "id": 1,
+      "ledID": 0,
+      "name": "Led 0",
+      "description": "Alienhead",
+      "groupID": 1
+    },
+    {
+      "id": 2,
+      "ledID": 1,
+      "name": "Led 1",
+      "description": "Side Left",
+      "groupID": 2
+    }
+  ],
+  "actionTypes": [
+    {
+      "actionTypeID": 1,
+      "name": "Morph",
+      "pseudoAction": false
+    },
+    {
+      "actionTypeID": 2,
+      "name": "Pulse",
+      "pseudoAction": false
+    },
+    {
+      "actionTypeID": 3,
+      "name": "SetColor",
+      "pseudoAction": false
+    },
+    {
+      "actionTypeID": 4,
+      "name": "Loop",
+      "pseudoAction": false
+    },
+    {
+      "actionTypeID": 15,
+      "name": "PlayPowerStatus",
+      "pseudoAction": true
+    }
+  ],
+  "visualizations": [
+    {
+      "visualizationID": 1,
+      "name": "Default",
+      "visualizationTypeID": 1,
+      "themeID": 1,
+      "applicationName": "",
+      "deviceID": 1
+    },
+    {
+      "visualizationID": 9,
+      "name": "New Email",
+      "visualizationTypeID": 3,
+      "themeID": 1,
+      "applicationName": "",
+      "deviceID": 1
+    }
+  ],
+  "visualizationTypes": [
+    {
+      "visualizationTypeID": 1,
+      "name": "Default",
+      "token": 1,
+      "hidden": false
+    },
+    {
+      "visualizationTypeID": 2,
+      "name": "Sleep Mode",
+      "token": 2,
+      "hidden": false
+    },
+    {
+      "visualizationTypeID": 3,
+      "name": "New Email",
+      "token": 0,
+      "hidden": false
+    },
+    {
+      "visualizationTypeID": 4,
+      "name": "Applications",
+      "token": 0,
+      "hidden": false
+    }
+  ],
+  "zones": [
+    {
+      "visualizationID": 1,
+      "zoneID": 1,
+      "name": "1",
+      "loop": true,
+      "flags": "2047",
+      "fixed": false,
+      "id": 1,
+      "flagsUsedForReplication": "2047"
+    },
+    {
+      "visualizationID": 1,
+      "zoneID": 2,
+      "name": "2",
+      "loop": true,
+      "flags": "2047",
+      "fixed": false,
+      "id": 2,
+      "flagsUsedForReplication": "2047"
+    },
+    {
+      "visualizationID": 9,
+      "zoneID": 3,
+      "name": "1",
+      "loop": false,
+      "flags": "2047",
+      "fixed": false,
+      "id": 1,
+      "flagsUsedForReplication": "0000"
+    },
+    {
+      "visualizationID": 9,
+      "zoneID": 4,
+      "name": "2",
+      "loop": false,
+      "flags": "2047",
+      "fixed": false,
+      "id": 2,
+      "flagsUsedForReplication": "0000"
+    }
+  ],
+  "zonesGroups": [
+    {
+      "zoneID": 1,
+      "groupID": 1
+    },
+    {
+      "zoneID": 2,
+      "groupID": 2
+    },
+    {
+      "zoneID": 3,
+      "groupID": 1
+    },
+    {
+      "zoneID": 4,
+      "groupID": 2
+    }
+  ],
+  "actions": [
+    {
+      "zoneID": 1,
+      "actionID": 1,
+      "actionTypeID": 3,
+      "color1": "#FFA0F000",
+      "color2": "#FF000000",
+      "duration": 0
+    },
+    {
+      "zoneID": 2,
+      "actionID": 2,
+      "actionTypeID": 3,
+      "color1": "#FFA0F000",
+      "color2": "#FF000000",
+      "duration": 0
+    }
+  ]
+}
