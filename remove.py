@@ -134,6 +134,7 @@ def remove_data_files():
         "/usr/local/share/man/man1/alienfx.1",
         "/usr/share/man/man1/alienfx.1.gz",
         "/usr/local/share/man/man1/alienfx.1.gz",
+        "~/.config/alienfx",
     ]
     
     removed_count = 0

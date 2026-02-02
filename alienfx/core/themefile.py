@@ -208,7 +208,15 @@ class AlienFXThemeFile(object):
         """ Load a theme from a file."""
         try:
             with open(theme_file_path) as tfile:
-                self.theme = json.load(tfile)
+                data = json.load(tfile)
+            # Detect full device/theme JSON (exported from AWCC) and convert
+            # into the simpler internal format expected by this app.
+            if (isinstance(data, dict) and
+                    ("devices" in data or "theme" in data) and
+                    "actions" in data):
+                self.theme = self._convert_device_theme(data)
+            else:
+                self.theme = data
             theme_name = os.path.splitext(
                 os.path.basename(theme_file_path))[0]
             if theme_name != os.path.splitext(self.LAST_THEME_FILE)[0]:
@@ -219,6 +227,94 @@ class AlienFXThemeFile(object):
             logging.error(exc)
             self.theme = {}
             self.theme_name = ""
+
+    def _convert_device_theme(self, data):
+        """Convert a device-style theme JSON into the internal theme dict.
+
+        This converts actions into state entries (only basic mapping).
+        Colors are converted from 0-255 per channel to 0-15 scale.
+        """
+        def hex_to_rgb4(hexcol):
+            # Accept #RRGGBB or #AARRGGBB
+            if not hexcol or not isinstance(hexcol, str):
+                return [0, 0, 0]
+            s = hexcol.lstrip('#')
+            if len(s) == 6:
+                r = int(s[0:2], 16)
+                g = int(s[2:4], 16)
+                b = int(s[4:6], 16)
+            elif len(s) == 8:
+                r = int(s[2:4], 16)
+                g = int(s[4:6], 16)
+                b = int(s[6:8], 16)
+            else:
+                return [0, 0, 0]
+            # convert 0-255 to 0-15
+            def to4(v):
+                return int(round(v / 17.0))
+            return [to4(r), to4(g), to4(b)]
+
+        # Build groupID -> name map
+        groups = {}
+        for g in data.get('groups', []):
+            gid = g.get('id') or g.get('groupID')
+            # prefer 'name' field
+            name = g.get('name') or g.get('groupID') or str(gid)
+            groups[gid] = name
+
+        # zonesGroups: map zoneID -> groupID
+        zone_to_group = {}
+        for zg in data.get('zonesGroups', []):
+            zid = zg.get('zoneID')
+            gid = zg.get('groupID')
+            if zid is not None and gid is not None:
+                zone_to_group[zid] = gid
+
+        # actions: each action has zoneID and color1/color2
+        # We'll fold actions into the "Boot" state as fixed colours or morphs
+        theme = {}
+        theme['speed'] = data.get('theme', {}).get('tempo', 200)
+        boot_list = []
+        for act in data.get('actions', []):
+            zid = act.get('zoneID')
+            gid = zone_to_group.get(zid)
+            zone_name = groups.get(gid, None)
+            if zone_name is None:
+                continue
+            action_type_id = act.get('actionTypeID')
+            # color1 / color2 fields
+            c1 = act.get('color1') or act.get('color')
+            c2 = act.get('color2')
+            if action_type_id == 3:  # SetColor -> fixed
+                cols = [hex_to_rgb4(c1)]
+                loop = [{
+                    self.KW_ACTION_TYPE: self.KW_ACTION_TYPE_FIXED,
+                    self.KW_ACTION_COLOURS: cols
+                }]
+            elif action_type_id in (1, 2, 4):  # morph/pulse/loop -> approximate
+                if c2:
+                    cols = [hex_to_rgb4(c1), hex_to_rgb4(c2)]
+                    loop = [{
+                        self.KW_ACTION_TYPE: self.KW_ACTION_TYPE_MORPH,
+                        self.KW_ACTION_COLOURS: cols
+                    }]
+                else:
+                    cols = [hex_to_rgb4(c1)]
+                    loop = [{
+                        self.KW_ACTION_TYPE: self.KW_ACTION_TYPE_FIXED,
+                        self.KW_ACTION_COLOURS: cols
+                    }]
+            else:
+                # unknown action, skip
+                continue
+            item = {
+                self.KW_ZONES: [zone_name],
+                self.KW_LOOP: loop
+            }
+            boot_list.append(item)
+        if boot_list:
+            theme['Boot'] = boot_list
+        return theme
         
     def _save_to_file(self, theme_file_path):
         """ Save theme contents to a file."""

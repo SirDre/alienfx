@@ -198,7 +198,7 @@
       "zoneID": 1,
       "actionID": 1,
       "actionTypeID": 3,
-      "color1": "#FFA0F000",
+      "color1": "#FF0000FF",
       "color2": "#FF000000",
       "duration": 0
     },
@@ -206,7 +206,7 @@
       "zoneID": 2,
       "actionID": 2,
       "actionTypeID": 3,
-      "color1": "#FFA0F000",
+      "color1": "#FFFF0000",
       "color2": "#FF000000",
       "duration": 0
     }
