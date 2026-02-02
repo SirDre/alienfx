@@ -1,0 +1,73 @@
+# UDEV rules for AlienFX controllers found in Alienware computers. These rules
+# allow user access of the AlienFX controllers for use by e.g. the alienfx 
+# program.
+
+# ===== USB-BASED ALIENWARE SYSTEMS =====
+
+# USB device 0x187c:0x0551 (AlienFX controller for M18R2 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0551", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0511 (AlienFX controller for Area51m desktop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0550", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0511 (AlienFX controller for Area51 desktop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0511", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0526 (AlienFX controller for Area51 R2 Desktop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0526", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0514 (AlienFX controller for M11xR1 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0514", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0515 (AlienFX controller for M11xR2 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0515", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0522 (AlienFX controller for M11xR3 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0522", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0527 (AlienFX controller for M13xR2 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0527", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0529 (AlienFX controller for M13xR3 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0529", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0521 (AlienFX controller for M14xR1 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0521", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0521 (AlienFX controller for M14xR2 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0521", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0525 (AlienFX controller for M14xR3 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0525", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0512 (AlienFX controller for M15x laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0512", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0512 (AlienFX controller for M17x laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0512", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0520 (AlienFX controller for M17xR3 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0520", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0530 (AlienFX controller for M17xR4 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0530", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0528 (AlienFX controller for 17R1 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0524", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0528 (AlienFX controller for 17R3 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0528", MODE:="666", GROUP="users"
+
+# USB device 0x187c:0x0518 (AlienFX controller for M18xR2 laptop)
+SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0518", MODE:="666", GROUP="users"
+
+
+# ===== ACPI/WMI-BASED ALIENWARE SYSTEMS =====
+
+# Alienware Alpha ASM100 (uses ACPI/WMI via alienware-wmi kernel module, NOT USB)
+# NOTE: Alpha ASM100 does NOT have a USB AlienFX controller
+# Lighting is controlled through /sys/devices/platform/alienware-wmi/
+# Ensure alienware-wmi kernel module is loaded (add to /etc/modules-load.d/alienware.conf)
+
+# ACPI/WMI device alienware-wmi (AlienFX controller for Alienware Alpha)
+SUBSYSTEM=="platform", DRIVER=="alienware-wmi", RUN+="/bin/chmod 0666 /sys/devices/platform/alienware-wmi/*"
