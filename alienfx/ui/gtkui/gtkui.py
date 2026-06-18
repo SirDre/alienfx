@@ -31,14 +31,17 @@ AlienFXApp: The main GUI application.
 
 import os
 import sys
+import logging
 import threading
+import time
+from importlib import resources
 
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import GObject
 from gi.repository import Gtk
 from gi.repository import Gdk
-import pkg_resources
+from gi.repository import GLib
 
 from alienfx.ui.gtkui.colour_palette import ColourPalette
 from alienfx.core.prober import AlienFXProber
@@ -81,6 +84,9 @@ class AlienFXApp(Gtk.Application):
         self.action_type = self.themefile.KW_ACTION_TYPE_FIXED
         self.theme_edited = False
         self.set_theme_done = True
+        self.apply_error = None
+        self.apply_started_at = None
+        self.apply_timeout_seconds = 30
 
     def enable_delete_theme_button(self, enable):
         """ Enable or disable the "Delete Theme" button."""
@@ -97,6 +103,12 @@ class AlienFXApp(Gtk.Application):
         response = dialog.run()
         dialog.destroy()
         return response == Gtk.ResponseType.YES
+
+    def _resource_path(self, *parts):
+        resource = resources.files("alienfx.ui.gtkui")
+        for part in parts:
+            resource = resource.joinpath(part)
+        return resource
             
     def on_action_new_theme_activate(self, widget):
         """ Handler for when the "New Theme" action is triggered."""
@@ -137,7 +149,7 @@ class AlienFXApp(Gtk.Application):
     def on_action_save_theme_as_activate(self, widget):
         """ Handler for when the "Save Theme As" action is triggered."""
         themes = self.themefile.get_themes()
-        saveas_theme_list_store = self.builder.get_object("saveas_theme_list store")
+        saveas_theme_list_store = self.builder.get_object("saveas_theme_list_store")
         saveas_theme_list_store.clear()
         for theme in themes:
             saveas_theme_list_store.append([theme])
@@ -190,7 +202,8 @@ class AlienFXApp(Gtk.Application):
         model = self.zone_list_view.get_model()
         actions = model[treeiter][1]
         new_action = self.themefile.make_zone_action(self.action_type, [[15, 15, 15]])
-        actions.actions.insert(action_index+1, new_action)
+        insert_index = action_index + 1 if action_index is not None else len(actions.actions)
+        actions.actions.insert(insert_index, new_action)
         self.builder.get_object("toolbutton_delete").set_sensitive(True)
         model[treeiter][1] = actions
         self.set_theme_dirty(True)
@@ -211,19 +224,55 @@ class AlienFXApp(Gtk.Application):
         
     def set_theme(self):
         """ Set the current theme on the computer."""
-        self.controller.set_theme(self.themefile)
-        self.themefile.applied()
+        try:
+            if self.controller is None:
+                raise RuntimeError("No AlienFX controller available")
+            self.controller.set_theme(self.themefile)
+            self.themefile.applied()
+            self.apply_error = None
+        except Exception as exc:
+            self.apply_error = str(exc)
+            logging.exception("Error applying theme")
         self.set_theme_done = True
         
     def set_theme_done_cb(self):
         """ This idle task updates the GUI when the theme has been sent to the
         AlienFX controller."""
+        # Prevent UI from remaining frozen forever if controller apply blocks.
+        if (not self.set_theme_done and
+                self.apply_started_at is not None and
+                (time.monotonic() - self.apply_started_at) > self.apply_timeout_seconds):
+            self.apply_error = (
+                "The controller may be unresponsive and is timed out after {}s.".format(
+                    self.apply_timeout_seconds
+                )
+            )
+            self.set_theme_done = True
+
         if self.set_theme_done:
             spinner = self.builder.get_object("spinner")
             spinner.stop()
             spinner.hide()
-            self.builder.get_object("statusbar").pop(self.context_id)
+            statusbar = self.builder.get_object("statusbar")
+            statusbar.pop(self.context_id)
             self.builder.get_object("toolbar").set_sensitive(True)
+            if self.apply_error is not None:
+                # Keep error visible in statusbar as requested.
+                statusbar.push(self.context_id, "Apply failed: {}".format(self.apply_error))
+                main_window = self.builder.get_object("main_window")
+                dialog = Gtk.MessageDialog(
+                    main_window,
+                    Gtk.DialogFlags.MODAL,
+                    Gtk.MessageType.ERROR,
+                    Gtk.ButtonsType.CLOSE,
+                    "Failed: {}".format(self.apply_error),
+                )
+                dialog.run()
+                dialog.destroy()
+                self.apply_error = None
+            else:
+                statusbar.push(self.context_id, "Theme applied.")
+            self.apply_started_at = None
             return False
         else:
             return True
@@ -238,8 +287,10 @@ class AlienFXApp(Gtk.Application):
         spinner.show()
         spinner.start()
         self.set_theme_done = False
-        GObject.idle_add(self.set_theme_done_cb)
-        self.set_theme_thread = threading.Thread(target=self.set_theme)
+        self.apply_started_at = time.monotonic()
+        self.apply_timeout_seconds = 10
+        GLib.idle_add(self.set_theme_done_cb)
+        self.set_theme_thread = threading.Thread(target=self.set_theme, daemon=True)
         self.set_theme_thread.start()
 
     def set_window_title(self, theme_name):
@@ -253,18 +304,37 @@ class AlienFXApp(Gtk.Application):
         normal_zone_list_store = self.builder.get_object("normal_zone_list_store")
         power_zone_list_store = self.builder.get_object("power_zone_list_store")
         normal_zone_list_store.clear()
+        power_zone_list_store.clear()
+        # If controller isn't available, nothing to load
+        if not self.controller:
+            return
         zones = self.controller.zone_map
         for zone in zones:
             if zone in self.controller.power_zones:
-                power_zone_list_store.clear()
-                power_states = [
+                # Get available power states from controller's state_map
+                # This handles both laptop (with battery states) and desktop (AC-only) controllers
+                power_states = []
+                
+                # Add AC states if available
+                ac_states = [
                     self.controller.STATE_AC_SLEEP,
                     self.controller.STATE_AC_CHARGED,
                     self.controller.STATE_AC_CHARGING,
+                ]
+                for state in ac_states:
+                    if state in self.controller.state_map:
+                        power_states.append(state)
+                
+                # Add battery states if available (laptop controllers)
+                battery_states = [
                     self.controller.STATE_BATTERY_SLEEP,
                     self.controller.STATE_BATTERY_ON,
-                    self.controller.STATE_BATTERY_CRITICAL
+                    self.controller.STATE_BATTERY_CRITICAL,
                 ]
+                for state in battery_states:
+                    if state in self.controller.state_map:
+                        power_states.append(state)
+                
                 for state in power_states:
                     a = AlienFXActions()
                     a.actions = self.themefile.get_zone_actions(state, zone)
@@ -368,8 +438,8 @@ class AlienFXApp(Gtk.Application):
         
     def on_activate(self, data=None):
         self.builder = Gtk.Builder()
-        self.builder.add_from_file(pkg_resources.resource_filename(
-            "alienfx.ui.gtkui", "glade/ui.glade"))
+        with resources.as_file(self._resource_path("glade", "ui.glade")) as ui_glade:
+            self.builder.add_from_file(str(ui_glade))
         
         self.zone_list_view = self.builder.get_object("zone_list_view")
         self.zone_list_view.get_selection().set_mode(Gtk.SelectionMode.SINGLE)
@@ -406,8 +476,10 @@ class AlienFXApp(Gtk.Application):
         
         self.builder.connect_signals(self)
         main_window = self.builder.get_object("main_window")
-        main_window.set_icon_from_file(pkg_resources.resource_filename(
-            "alienfx", "data/icons/hicolor/scalable/apps/alienfx.svg"))
+        with resources.as_file(resources.files("alienfx").joinpath(
+            "data", "icons", "hicolor", "scalable", "apps", "alienfx.svg"
+        )) as icon_file:
+            main_window.set_icon_from_file(str(icon_file))
         main_window.show_all()
         self.add_window(main_window)
         
@@ -455,6 +527,8 @@ class AlienFXApp(Gtk.Application):
     def on_colour_selected(self, sender=None, data=None):
         if self.selected_action is None:
             return
+        if sender is None:
+            return
             
         colour = sender.get_colour()
         (treeiter, action_index) = self.selected_action
@@ -471,9 +545,10 @@ class AlienFXApp(Gtk.Application):
         if self.action_type == self.themefile.KW_ACTION_TYPE_MORPH:
             if len(old_colours) != 2:
                 old_colours.append([0, 0, 0])
-        if sender.get_parent() == self.palette1:
+        parent = sender.get_parent() if sender is not None else None
+        if parent == self.palette1:
             old_colours[0] = colour
-        if sender.get_parent() == self.palette2:
+        if parent == self.palette2:
             old_colours[1] = colour
         self.themefile.set_action_colours(action, old_colours)
         model[treeiter][1] = actions
@@ -495,7 +570,7 @@ class AlienFXApp(Gtk.Application):
             model = treeview.get_model()
             treeiter = model.get_iter(path)
             actions = model[treeiter][1]
-            if action_index < len(actions.actions):
+            if action_index is not None and action_index < len(actions.actions):
                 self.enable_action_edit_controls(True)
                 self.selected_action = (treeiter, action_index)
                 if len(actions.actions) == 1:
