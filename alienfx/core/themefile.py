@@ -163,10 +163,13 @@ class AlienFXThemeFile(object):
             return []
         if state not in self.theme:
             return []
+        zone_candidates = (zone,)
+        if hasattr(self.controller, "get_zone_aliases"):
+            zone_candidates = tuple(self.controller.get_zone_aliases(zone))
         for item in self.theme[state]:
             if self.KW_ZONES not in item:
                 continue
-            if zone not in item[self.KW_ZONES]:
+            if not any(candidate in item[self.KW_ZONES] for candidate in zone_candidates):
                 continue
             if self.KW_LOOP not in item:
                 continue

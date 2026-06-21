@@ -303,6 +303,7 @@ class AlienFXApp(Gtk.Application):
         theme file currently loaded."""
         normal_zone_list_store = self.builder.get_object("normal_zone_list_store")
         power_zone_list_store = self.builder.get_object("power_zone_list_store")
+        normal_zones_added = set()
         normal_zone_list_store.clear()
         power_zone_list_store.clear()
         # If controller isn't available, nothing to load
@@ -339,10 +340,25 @@ class AlienFXApp(Gtk.Application):
                     a = AlienFXActions()
                     a.actions = self.themefile.get_zone_actions(state, zone)
                     power_zone_list_store.append([state, a])
-            elif zone in self.controller.zone_map:  # Is elif really necessary? Aren't we already iterating self.controller.zone_map?
-                a = AlienFXActions()
-                a.actions = self.themefile.get_zone_actions(self.controller.STATE_BOOT, zone)
-                normal_zone_list_store.append([zone, a])
+
+        # Keep compatibility with themes/controllers that use a dedicated
+        normal_states = []
+
+        zone_states = [
+            self.controller.ZONE_ALIEN_HEAD,
+            self.controller.ZONE_POWER_BUTTON,
+            self.controller.ZONE_LEFT_SIDE,
+        ]                
+        for state in zone_states:
+            if state in self.controller.power_zones:
+                normal_states.append(state)                
+        
+        for state in normal_states:
+            a = AlienFXActions()
+            a.actions = self.themefile.get_zone_actions(self.controller.STATE_BOOT, state)
+            normal_zone_list_store.append([state, a])
+            normal_zones_added.add(state)
+
         self.zone_list_view.set_model(normal_zone_list_store)
         self.builder.get_object("radiobutton_normal_zones").set_active(True)
         if theme_name is not None:

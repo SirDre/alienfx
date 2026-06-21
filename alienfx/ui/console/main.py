@@ -159,7 +159,7 @@ def start():
                             print("    Output HDMI is connected to {}".format(hdmi.source))
                         print()
                 except PermissionError:
-                    print("You do not have permission to run this command (do you need sudo?)")
+                    print("You do not have permission to run this command (sudo required.)")
 
             if args.led_state:
                 try:
@@ -179,17 +179,17 @@ def start():
                                 print("        blue: {}".format(val.blue))
                         print()
                 except PermissionError:
-                    print("You do not have permission to run this command (do you need sudo?)")
+                    print("You do not have permission to run this command (sudo required.)")
 
 
-            for arg_name, zone in [(args.head, Zone.Head), (args.left, Zone.Left), (args.right, Zone.Right)]:
+            for arg_name, zone in [(args.head, Zone.Head), (args.left, Zone.Left)]:
                 if arg_name is not None:
                     rgb = parse_rgb_string(arg_name)
                     if rgb is not None:
                         try:
                             aw.set_rgb_zone(zone, rgb[0], rgb[1], rgb[2])
                         except PermissionError:
-                            print("You do not have permission to run this command (do you need sudo?)")
+                            print("You do not have permission to run this command (sudo required.)")
 
             if args.json:
                 print(json.dumps(json_data))

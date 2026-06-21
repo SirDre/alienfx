@@ -48,11 +48,13 @@ class AlienFXControllerASM100(acpi_controller.AlienFXACPIController):
     # Based on the JSON theme structure:
     # LED 0 - Alien Head (Group01)
     # LED 1 - Side Left (Group02)
-    ALIEN_HEAD = 0x0001  # ledID: 0
-    SIDE_LEFT = 0x0002   # ledID: 1
+    ALIEN_HEAD = 0x0000  # ledID: 0
+    SIDE_LEFT = 0x0001   # ledID: 1
     
     # Legacy compatibility (POWER_BUTTON may not exist as separate zone)
     POWER_BUTTON = ALIEN_HEAD  # Map to Alienhead for backward compatibility
+    ZONE_LEFT_SIDE = "Left Side"
+    ZONE_LEFT_SIDE_LEGACY = "Side Left"
     
     # Reset codes
     RESET_ALL_LIGHTS_OFF = 3
@@ -97,14 +99,13 @@ class AlienFXControllerASM100(acpi_controller.AlienFXACPIController):
         # Map zone names to their LED IDs (based on JSON leds array)
         self.zone_map = {
             self.ZONE_ALIEN_HEAD: self.ALIEN_HEAD,      # LED 0 - Alien Head
-            self.ZONE_POWER_BUTTON: self.ALIEN_HEAD,    # LED 0 - Mapped to Alien Head
-            "Side Left": self.SIDE_LEFT,                # LED 1 - Side Left
+            self.ZONE_LEFT_SIDE: self.SIDE_LEFT,        # LED 1 - Side Left
         }
         
         # LED groups mapping (from JSON groups and zonesGroups)
         self.led_groups = {
-            1: "Alien Head",     # Group01 - groupID: 1
-            2: "Side Left",     # Group02 - groupID: 2
+            1: self.ALIEN_HEAD,     # Group01 - groupID: 1
+            2: self.SIDE_LEFT,      # Group02 - groupID: 2
         }
         
         # LED definitions (from JSON leds array)
@@ -125,7 +126,7 @@ class AlienFXControllerASM100(acpi_controller.AlienFXACPIController):
         # Based on visualization types
         self.power_zones = [
             self.ZONE_ALIEN_HEAD,
-            "Side Left",
+            self.ZONE_LEFT_SIDE,
         ]
         
         # Map reset names to their codes
@@ -162,11 +163,17 @@ class AlienFXControllerASM100(acpi_controller.AlienFXACPIController):
         }
 
     def _zone_name_to_sysfs_zone(self, zone_name):
-        if zone_name in (self.ZONE_ALIEN_HEAD, self.ZONE_POWER_BUTTON):
+        if zone_name == self.ZONE_ALIEN_HEAD:
             return Zone.Head
-        if zone_name == "Side Left":
+        if zone_name in (self.ZONE_LEFT_SIDE, self.ZONE_LEFT_SIDE_LEGACY):
             return Zone.Left
         return None
+
+    def get_zone_aliases(self, zone_name):
+        """Return canonical and legacy aliases for a zone name."""
+        if zone_name == self.ZONE_LEFT_SIDE:
+            return (self.ZONE_LEFT_SIDE, self.ZONE_LEFT_SIDE_LEGACY)
+        return (zone_name,)
 
     def _first_action_colour(self, themefile, item):
         for action in themefile.get_loop_items(item):

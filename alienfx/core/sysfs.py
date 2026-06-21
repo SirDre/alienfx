@@ -144,8 +144,8 @@ class Alienware:
             exists = True
             rgb_root = self._sys_path("rgb_zones")
             if rgb_root.exists():
-                # zone00 -> head, zone01 -> left, zone02 -> right
-                mapping = {"zone00": Zone.Head, "zone01": Zone.Left, "zone02": Zone.Right}
+                # zone00 -> head, zone01 -> left
+                mapping = {"zone00": Zone.Head, "zone01": Zone.Left}
                 for fname, z in mapping.items():
                     fpath = rgb_root / fname
                     if fpath.exists():
@@ -154,7 +154,7 @@ class Alienware:
         return RGBZones(zones=zones, exists=exists)
 
     def set_rgb_zone(self, zone: Zone, red: int, green: int, blue: int) -> None:
-        idx = {Zone.Head: "zone00", Zone.Left: "zone01", Zone.Right: "zone02"}[zone]
+        idx = {Zone.Head: "zone00", Zone.Left: "zone01"}[zone]
         path = self._sys_path("rgb_zones", idx)
         # write as hex pair each (two hex digits per component) like the rust code
         value = f"{red:02x}{green:02x}{blue:02x}"
