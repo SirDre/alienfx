@@ -342,6 +342,7 @@ class AlienFXApp(Gtk.Application):
                     power_zone_list_store.append([state, a])
 
         # Keep compatibility with themes/controllers that use a dedicated
+        # power zone for the power button, even if the controller doesn't have a separate power button zone.
         normal_states = []
 
         zone_states = [
@@ -556,11 +557,17 @@ class AlienFXApp(Gtk.Application):
         if (self.action_type in [
                 self.themefile.KW_ACTION_TYPE_FIXED, 
                 self.themefile.KW_ACTION_TYPE_BLINK]):
-            if len(old_colours) != 1:
-                old_colours = old_colours[0:0]
+            if len(old_colours) == 0:
+                old_colours = [[0, 0, 0]]
+            elif len(old_colours) > 1:
+                old_colours = old_colours[0:1]
         if self.action_type == self.themefile.KW_ACTION_TYPE_MORPH:
-            if len(old_colours) != 2:
+            if len(old_colours) == 0:
+                old_colours = [[0, 0, 0], [0, 0, 0]]
+            elif len(old_colours) == 1:
                 old_colours.append([0, 0, 0])
+            elif len(old_colours) > 2:
+                old_colours = old_colours[0:2]
         parent = sender.get_parent() if sender is not None else None
         if parent == self.palette1:
             old_colours[0] = colour

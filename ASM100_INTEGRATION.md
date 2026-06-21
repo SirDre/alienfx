@@ -34,12 +34,24 @@ The `load_theme()` method dynamically filters power states based on what the con
 ```bash
 pip install -r requirements.txt
 ```
-
-### Launch GTK UI
+### Install
 ```bash
-alienfx  # or python3 -m alienfx.ui.gtkui.gtkui
+python setup.py install
+python setup.py install_data
 ```
 
+### Launch
+```bash
+sudo alienfx
+
+# or sudo python /usr/local/bin/alienfx-gtk
+
+```
+
+### Uninstall
+```bash
+python remove.py
+```
 The GTK UI will automatically detect your controller (USB or ACPI/WMI) and load appropriate zones and states.
 
 ## Color Utilities API
