@@ -346,9 +346,22 @@ class AlienFXApp(Gtk.Application):
         normal_states = []
 
         zone_states = [
+            self.controller.ZONE_LEFT_KEYBOARD,
+            self.controller.ZONE_MIDDLE_LEFT_KEYBOARD,
+            self.controller.ZONE_MIDDLE_RIGHT_KEYBOARD,
+            self.controller.ZONE_RIGHT_KEYBOARD,
+            self.controller.ZONE_RIGHT_SPEAKER,
+            self.controller.ZONE_LEFT_SPEAKER,
             self.controller.ZONE_ALIEN_HEAD,
-            self.controller.ZONE_POWER_BUTTON,
             self.controller.ZONE_LEFT_SIDE,
+            self.controller.ZONE_LOGO,
+            self.controller.ZONE_TOUCH_PAD,
+            self.controller.ZONE_MEDIA_BAR,
+            self.controller.ZONE_STATUS_LEDS,
+            self.controller.ZONE_POWER_BUTTON,
+            self.controller.ZONE_HDD_LEDS,
+            self.controller.ZONE_RIGHT_DISPLAY,  # LED-bar display right side, as built in the AW17R4
+            self.controller.ZONE_LEFT_DISPLAY,  # LED-bar display left side, as built in the AW17R4         
         ]                
         for state in zone_states:
             if state in self.controller.power_zones:
