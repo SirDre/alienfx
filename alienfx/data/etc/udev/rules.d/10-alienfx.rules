@@ -70,4 +70,4 @@ SUBSYSTEM=="usb", ATTR{idVendor}=="187c", ATTR{idProduct}=="0518", MODE:="666", 
 # Ensure alienware-wmi kernel module is loaded (add to /etc/modules-load.d/alienware.conf)
 
 # ACPI/WMI device alienware-wmi (AlienFX controller for Alienware Alpha)
-SUBSYSTEM=="platform", ATTR{idVendor}=="187c", ATTR{idProduct}=="ASM100", MODE:="666", GROUP="users", DRIVER=="alienware-wmi", RUN+="/bin/chmod 0666 /sys/devices/platform/alienware-wmi/*"
+SUBSYSTEM=="platform", ATTR{idVendor}=="187c", ATTR{idProduct}=="ASM100", MODE:="666", GROUP="users", DRIVER=="alienware-wmi", RUN+="/bin/chmod 666 /sys/devices/platform/alienware-wmi/*"

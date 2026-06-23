@@ -68,16 +68,21 @@ class AlienFXProber(object):
         
     @staticmethod
     def get_controller():
+        """ Go through the supported_controllers list in AlienFXController
+        and see if any of them exist on the USB bus and ACPI, Return the first one
+        found, or None if none are found.
+        """
+
         # First check USB controllers
-        for controller in AlienFXController. supported_controllers:
-            vid = controller. vendor_id
+        for controller in AlienFXController.supported_controllers:
+            vid = controller.vendor_id
             pid = controller.product_id
             dev = usb.core.find(idVendor=vid, idProduct=pid)
             if dev is not None:
                 return controller
         
         # Then check ACPI controllers
-        for controller in AlienFXACPIController. supported_controllers:
+        for controller in AlienFXACPIController.supported_controllers:
             # Check if ACPI path exists
             acpi_path = getattr(controller, 'acpi_path', '/sys/devices/platform/alienware-wmi')
             if os.path.exists(acpi_path):
@@ -91,12 +96,14 @@ class AlienFXProber(object):
         vid = int(vendor, 16)  # Convert our given Vendor-HEX-String to an equivalent intenger
 
         devs = usb.core.find(find_all=1)  # All USB devices
+        if devs is None:
+            return None
         devices = []  # List of found AFX-Controllers
         for dev in devs: 
             if dev is not None: 
-                if dev.idVendor is not None:
-                    if dev.idVendor == vid:
-                        devices.append(dev)
+                dev_vendor = getattr(dev, 'idVendor', None)
+                if dev_vendor is not None and dev_vendor == vid:
+                    devices.append(dev)
         if len(devices):
             return devices
         return None
