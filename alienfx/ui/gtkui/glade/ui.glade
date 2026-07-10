@@ -157,6 +157,20 @@
               </packing>
             </child>
             <child>
+              <object class="GtkToolButton" id="toolbutton_authenticate">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Authenticate and relaunch AlienFX in root mode</property>
+                <property name="label" translatable="yes">Start Daemon</property>
+                <property name="use_underline">True</property>
+                <signal name="clicked" handler="on_action_authenticate_activate" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
               <object class="GtkToolButton" id="toolbutton_apply">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>

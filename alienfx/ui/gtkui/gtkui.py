@@ -29,9 +29,12 @@ This module provides the following classes:
 AlienFXApp: The main GUI application.
 """
 
-import os
-import sys
+import argparse
 import logging
+import os
+import shutil
+import subprocess
+import sys
 import threading
 import time
 from importlib import resources
@@ -40,7 +43,6 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import GObject
 from gi.repository import Gtk
-from gi.repository import Gdk
 from gi.repository import GLib
 
 from alienfx.ui.gtkui.colour_palette import ColourPalette
@@ -50,6 +52,9 @@ from alienfx.ui.gtkui.action_renderer import AlienFXActionCellRenderer
 from alienfx.ui.gtkui.action_renderer import AlienFXActions
         
 class AlienFXApp(Gtk.Application):
+    application_id = "io.github.trackmastersteve.alienfx"
+    application_name = "AlienFX"
+    wm_class = "alienfx"
     
     # These are the colours you can set a zone action to.
     colours = [
@@ -75,9 +80,13 @@ class AlienFXApp(Gtk.Application):
             "#009AF4"
         ]
         
-    def __init__(self):
-        Gtk.Application.__init__(self)
+    def __init__(self, root_mode=False):
+        GLib.set_prgname(self.wm_class)
+        GLib.set_application_name(self.application_name)
+        Gtk.Window.set_default_icon_name(self.wm_class)
+        Gtk.Application.__init__(self, application_id=self.application_id)
         self.connect("activate", self.on_activate)
+        self.root_mode = root_mode or os.geteuid() == 0
         self.controller = AlienFXProber.get_controller()
         self.themefile = AlienFXThemeFile(self.controller)
         self.selected_action = None
@@ -87,6 +96,123 @@ class AlienFXApp(Gtk.Application):
         self.apply_error = None
         self.apply_started_at = None
         self.apply_timeout_seconds = 30
+        self.mode_context_id = None
+        self.pkexec_path = shutil.which("pkexec")
+
+    def _project_root(self):
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+    def _root_launcher_base_command(self):
+        return [sys.executable, "-m", "alienfx.ui.gtkui.gtkui"]
+
+    def _root_launcher_env_assignments(self):
+        env_keys = [
+            "DISPLAY",
+            "XAUTHORITY",
+            "XDG_RUNTIME_DIR",
+            "DBUS_SESSION_BUS_ADDRESS",
+            "WAYLAND_DISPLAY",
+            "XDG_CURRENT_DESKTOP",
+            "DESKTOP_SESSION",
+            "LANG",
+            "LC_ALL",
+            "PATH",
+        ]
+        assignments = []
+        for key in env_keys:
+            value = os.environ.get(key)
+            if value:
+                assignments.append("{}={}".format(key, value))
+
+        python_path = os.environ.get("PYTHONPATH", "")
+        project_root = self._project_root()
+        if project_root not in python_path.split(os.pathsep):
+            python_path = os.pathsep.join([part for part in [python_path, project_root] if part])
+        if python_path:
+            assignments.append("PYTHONPATH={}".format(python_path))
+        return assignments
+
+    def _set_mode_status(self, message):
+        statusbar = self.builder.get_object("statusbar")
+        if self.mode_context_id is None:
+            self.mode_context_id = statusbar.get_context_id("Mode")
+        statusbar.pop(self.mode_context_id)
+        statusbar.push(self.mode_context_id, message)
+
+    def _refresh_privilege_ui(self):
+        auth_button = self.builder.get_object("toolbutton_authenticate")
+        if self.root_mode:
+            auth_button.set_sensitive(False)
+            auth_button.set_tooltip_text("AlienFX is already running with root privileges.")
+            self._set_mode_status("Running in root mode.")
+            return
+
+        if self.pkexec_path is None:
+            auth_button.set_sensitive(False)
+            auth_button.set_tooltip_text("Install pkexec to relaunch AlienFX with root privileges.")
+            self._set_mode_status("Running in user mode. Root mode requires pkexec.")
+            return
+
+        auth_button.set_sensitive(True)
+        auth_button.set_tooltip_text("Authenticate and relaunch AlienFX in root mode.")
+        self._set_mode_status("Running in user mode. Use Authenticate for root mode.")
+
+    def _show_root_mode_error(self, message):
+        self.builder.get_object("toolbar").set_sensitive(True)
+        self._refresh_privilege_ui()
+        main_window = self.builder.get_object("main_window")
+        dialog = Gtk.MessageDialog(
+            main_window,
+            Gtk.DialogFlags.MODAL,
+            Gtk.MessageType.ERROR,
+            Gtk.ButtonsType.CLOSE,
+            message,
+        )
+        dialog.run()
+        dialog.destroy()
+
+    def _launch_root_mode_worker(self):
+        command = [
+            self.pkexec_path,
+            "env",
+            *self._root_launcher_env_assignments(),
+            *self._root_launcher_base_command(),
+            "--spawn-root-ui",
+        ]
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=self._project_root(),
+                check=False,
+            )
+        except Exception as exc:
+            GLib.idle_add(
+                self._show_root_mode_error,
+                "Failed to start root mode: {}".format(exc),
+            )
+            return
+
+        if completed.returncode == 0:
+            GLib.idle_add(self.quit)
+            return
+
+        GLib.idle_add(
+            self._show_root_mode_error,
+            "Authentication was cancelled or root mode failed to start.",
+        )
+
+    def on_action_authenticate_activate(self, widget):
+        if self.root_mode:
+            return
+        if self.pkexec_path is None:
+            self._show_root_mode_error(
+                "Unable to authenticate because pkexec is not installed on this system."
+            )
+            return
+
+        self.builder.get_object("toolbar").set_sensitive(False)
+        self._set_mode_status("Waiting for authentication to enter root mode...")
+        threading.Thread(target=self._launch_root_mode_worker, daemon=True).start()
 
     def enable_delete_theme_button(self, enable):
         """ Enable or disable the "Delete Theme" button."""
@@ -510,8 +636,11 @@ class AlienFXApp(Gtk.Application):
             "data", "icons", "hicolor", "scalable", "apps", "alienfx.svg"
         )) as icon_file:
             main_window.set_icon_from_file(str(icon_file))
+        main_window.set_icon_name(self.wm_class)
+        main_window.set_wmclass(self.wm_class, self.application_name)
         main_window.show_all()
         self.add_window(main_window)
+        self._refresh_privilege_ui()
         
         if self.controller is None:
             Gtk.MessageDialog(
@@ -614,5 +743,42 @@ class AlienFXApp(Gtk.Application):
         
 def start():
     """ Entry point for the GTK GUI interface to alienfx. """
-    app = AlienFXApp()
+    args = parse_args()
+    if args.spawn_root_ui:
+        return spawn_root_ui()
+    app = AlienFXApp(root_mode=args.root_mode)
     app.run(None)
+    return 0
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--root-mode", action="store_true")
+    parser.add_argument("--spawn-root-ui", action="store_true")
+    return parser.parse_args(argv)
+
+
+def spawn_root_ui():
+    env = os.environ.copy()
+    command = [
+        sys.executable,
+        "-m",
+        "alienfx.ui.gtkui.gtkui",
+        "--root-mode",
+    ]
+    try:
+        subprocess.Popen(
+            command,
+            cwd=os.getcwd(),
+            env=env,
+            start_new_session=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(start())

@@ -69,6 +69,11 @@ files stored in ``$XDG_CONFIG_HOME/alienfx``. If ``XDG_CONFIG_HOME`` is not set,
 ``~/.config/alienfx`` is used. Both the CLI and GUI programs use these theme
 files, and the GUI program allows you to create new themes as well.
 
+When the GTK interface is started without root privileges, the toolbar now
+includes an Authenticate action. It uses ``pkexec`` to prompt for credentials,
+then relaunches the GUI in root mode so hardware access can be performed from
+the elevated session.
+
 See the man page of alienfx ``$ man alienfx`` for the cli options supported. 
 
 If you run the CLI-version of alienfx on a currently unsupported device, the program will ask you if you wish to perform a zonescan.
